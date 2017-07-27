@@ -15,9 +15,9 @@ package sandbox;
 import java.util.concurrent.TimeUnit;
 
 import com.yammer.metrics.core.*;
-import metrics_influxdb.HttpInfluxdbProtocol;
-import metrics_influxdb.InfluxdbReporter;
-import metrics_influxdb.v08.ReporterV08;
+import metrics2_influxdb.HttpInfluxdbProtocol;
+import metrics2_influxdb.InfluxdbReporter;
+import metrics2_influxdb.v08.ReporterV08;
 
 import com.yammer.metrics.reporting.ConsoleReporter;
 import com.yammer.metrics.reporting.AbstractPollingReporter;

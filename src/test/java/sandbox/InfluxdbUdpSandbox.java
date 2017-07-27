@@ -3,9 +3,9 @@ package sandbox;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.MetricsRegistry;
-import metrics_influxdb.InfluxdbReporter;
-import metrics_influxdb.UdpInfluxdbProtocol;
-import metrics_influxdb.v08.ReporterV08;
+import metrics2_influxdb.InfluxdbReporter;
+import metrics2_influxdb.UdpInfluxdbProtocol;
+import metrics2_influxdb.v08.ReporterV08;
 
 import java.util.concurrent.TimeUnit;
 

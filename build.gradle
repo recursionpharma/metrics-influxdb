@@ -1,10 +1,7 @@
 plugins {
 	id "java"
 	id "maven-publish"
-	id "eclipse"
-	id "org.dm.bundle" version "0.8.2"
 	id "nebula.provided-base" version "2.2.2"
-	id "com.jfrog.bintray" version "1.6"
 }
 
 group = "com.recursionpharma"
@@ -88,36 +85,4 @@ publishing {
 			}
 		}
 	}
-}
-bintray {
-	user = bintray_user
-	key = bintray_api_key
-
-	publications = ['mavenStuff'] //When uploading Maven-based publication files
-	//dryRun = false //Whether to run this as dry-run, without deploying
-	publish = true //If version should be auto published after an upload
-	pkg {
-		repo = 'maven'
-		name = "metrics2-influxdb"
-		desc = description
-		websiteUrl = "https://github.com/recursionpharma/metrics-influxdb"
-		issueTrackerUrl = "https://github.com/recursionpharma/metrics-influxdb/issues"
-		vcsUrl = "https://github.com/recursionpharma/metrics-influxdb.git"
-		licenses = ['CC0-1.0']
-		publicDownloadNumbers = true
-		version {
-			name = project.version
-			vcsTag = project.version
-			//attributes = []
-			//gpg {
-			//	sign = true //Determines whether to GPG sign the files. The default is false
-			//	passphrase = 'optional, the passphrase for GPG signing'
-			//}
-		}
-	}
-}
-
-bintrayUpload.dependsOn(test, assemble)
-bintrayUpload.onlyIf {
-	bintray_api_key.trim().length() > 0
 }

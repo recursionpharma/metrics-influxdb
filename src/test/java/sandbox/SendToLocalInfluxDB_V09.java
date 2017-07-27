@@ -18,9 +18,9 @@ import com.yammer.metrics.core.*;
 import com.yammer.metrics.reporting.AbstractPollingReporter;
 import com.yammer.metrics.reporting.ConsoleReporter;
 
-import metrics_influxdb.HttpInfluxdbProtocol;
-import metrics_influxdb.InfluxdbReporter;
-import metrics_influxdb.UdpInfluxdbProtocol;
+import metrics2_influxdb.HttpInfluxdbProtocol;
+import metrics2_influxdb.InfluxdbReporter;
+import metrics2_influxdb.UdpInfluxdbProtocol;
 
 public class SendToLocalInfluxDB_V09 {
 
