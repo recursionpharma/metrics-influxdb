@@ -3,8 +3,10 @@
 .project
 .settings
 .gradle
+.idea
 target
 bin
 build
 test-output
-
+*.iml
+/out

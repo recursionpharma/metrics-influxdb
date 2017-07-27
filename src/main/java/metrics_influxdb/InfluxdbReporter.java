@@ -15,13 +15,11 @@ package metrics_influxdb;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.codahale.metrics.Clock;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.ScheduledReporter;
+import com.yammer.metrics.core.Clock;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.AbstractPollingReporter;
 
 import metrics_influxdb.api.measurements.MetricMeasurementTransformer;
 import metrics_influxdb.measurements.HttpInlinerSender;
@@ -54,7 +52,7 @@ public class InfluxdbReporter  {
 	 *          the registry to report
 	 * @return a {@link Builder} instance for a {@link InfluxdbReporter}
 	 */
-	public static Builder forRegistry(MetricRegistry registry) {
+	public static Builder forRegistry(MetricsRegistry registry) {
 		return new Builder(registry);
 	}
 
@@ -65,14 +63,10 @@ public class InfluxdbReporter  {
 	 */
 	public static class Builder {
 
-		private final MetricRegistry registry;
+		private final MetricsRegistry registry;
 		private Clock clock;
 		private String prefix;
-		private TimeUnit rateUnit;
-		private TimeUnit durationUnit;
-		private MetricFilter filter;
 		private boolean skipIdleMetrics;
-		private ScheduledExecutorService executor;
 
 		@VisibilityIncreasedForTests InfluxdbCompatibilityVersions influxdbVersion;
 		@VisibilityIncreasedForTests InfluxdbProtocol protocol;
@@ -80,13 +74,10 @@ public class InfluxdbReporter  {
 		@VisibilityIncreasedForTests Map<String, String> tags;
 		@VisibilityIncreasedForTests MetricMeasurementTransformer transformer = MetricMeasurementTransformer.NOOP;
 
-		private Builder(MetricRegistry registry) {
+		private Builder(MetricsRegistry registry) {
 			this.registry = registry;
 			this.clock = Clock.defaultClock();
 			this.prefix = null;
-			this.rateUnit = TimeUnit.SECONDS;
-			this.durationUnit = TimeUnit.MILLISECONDS;
-			this.filter = MetricFilter.ALL;
 			this.protocol = new HttpInfluxdbProtocol();
 			this.influxdbVersion = InfluxdbCompatibilityVersions.LATEST;
 			this.tags = new HashMap<>();
@@ -103,11 +94,6 @@ public class InfluxdbReporter  {
 			return this;
 		}
 
-		public Builder withScheduler(ScheduledExecutorService executor) {
-			this.executor = executor;
-			return this;
-		}
-
 		/**
 		 * Prefix all metric names with the given string.
 		 *
@@ -116,39 +102,6 @@ public class InfluxdbReporter  {
 		 */
 		public Builder prefixedWith(String prefix) {
 			this.prefix = prefix;
-			return this;
-		}
-
-		/**
-		 * Convert rates to the given time unit.
-		 *
-		 * @param rateUnit a unit of time
-		 * @return {@code this}
-		 */
-		public Builder convertRatesTo(TimeUnit rateUnit) {
-			this.rateUnit = rateUnit;
-			return this;
-		}
-
-		/**
-		 * Convert durations to the given time unit.
-		 *
-		 * @param durationUnit a unit of time
-		 * @return {@code this}
-		 */
-		public Builder convertDurationsTo(TimeUnit durationUnit) {
-			this.durationUnit = durationUnit;
-			return this;
-		}
-
-		/**
-		 * Only report metrics which match the given filter.
-		 *
-		 * @param filter a {@link MetricFilter}
-		 * @return {@code this}
-		 */
-		public Builder filter(MetricFilter filter) {
-			this.filter = filter;
 			return this;
 		}
 
@@ -164,34 +117,28 @@ public class InfluxdbReporter  {
 		}
 
 		/**
-		 * Builds a {@link ScheduledReporter} with the given properties, sending
+		 * Builds a {@link AbstractPollingReporter} with the given properties, sending
 		 * metrics using the given InfluxDB.
 		 *
-		 * @return a {@link ScheduledReporter}
+		 * @return a {@link AbstractPollingReporter}
 		 */
-		public ScheduledReporter build() {
-			ScheduledReporter reporter;
+		public AbstractPollingReporter build() {
+			AbstractPollingReporter reporter;
 
 			switch (influxdbVersion) {
 			case V08:
 				Influxdb influxdb = buildInfluxdb();
-				reporter = (executor == null)
-						? new ReporterV08(registry, influxdb, clock, prefix, rateUnit, durationUnit, filter, skipIdleMetrics)
-						: new ReporterV08(registry, influxdb, clock, prefix, rateUnit, durationUnit, filter, skipIdleMetrics, executor)
-						;
+				reporter = new ReporterV08(registry, influxdb, clock, prefix, skipIdleMetrics);
 				break;
 			default:
 				Sender s = buildSender();
-				reporter = executor == null
-						? new MeasurementReporter(s, registry, filter, rateUnit, durationUnit, clock, tags, transformer)
-						: new MeasurementReporter(s, registry, filter, rateUnit, durationUnit, clock, tags, transformer, executor)
-						;
+				reporter = new MeasurementReporter(s, registry, clock, tags, transformer);
 			}
 			return reporter;
 		}
 
 		/**
-		 * Operates with influxdb version less or equal than 08. 
+		 * Operates with influxdb version less or equal than 08.
 		 * @return the builder itself
 		 */
 		public Builder v08() {
@@ -237,7 +184,7 @@ public class InfluxdbReporter  {
 			if (protocol instanceof HttpInfluxdbProtocol) {
 				try {
 					HttpInfluxdbProtocol p = (HttpInfluxdbProtocol) protocol;
-					return new InfluxdbHttp(p.scheme, p.host, p.port, p.database, p.user, p.password, durationUnit);
+					return new InfluxdbHttp(p.scheme, p.host, p.port, p.database, p.user, p.password, TimeUnit.MILLISECONDS);
 				} catch(RuntimeException exc) {
 					throw exc;
 				} catch(Exception exc) {

@@ -7,8 +7,8 @@ plugins {
 	id "com.jfrog.bintray" version "1.6"
 }
 
-group = "com.github.davidb"
-def description = "A reporter for metrics which announces measurements to an InfluxDB server."
+group = "com.recursionpharma"
+def description = "A reporter for metrics 2 which announces measurements to an InfluxDB server. Forked from davidB/metrics-influxdb and ported to metrics 2"
 version = "git describe --always --dirty".execute().text.trim()
 println("version : '${version}'")
 
@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-	provided 'io.dropwizard.metrics:metrics-core:3.1.2'
+	provided 'com.yammer.metrics:metrics-core:2.2.0'
 	compile 'org.slf4j:slf4j-api:1.7.7'
 
 	testCompile 'junit:junit:4.4'
@@ -52,9 +52,9 @@ artifacts {
 }
 
 def pomConfig = {
-	name project.name
-	url "https://github.com/davidB/${project.name}"
-	inceptionYear "2016"
+	name "metrics2-influxdb"
+	url "https://github.com/recursionpharma/metrics-influxdb"
+	inceptionYear "2017"
 	licenses {
 		license {
 			name "Public domain (CC0-1.0)"
@@ -63,19 +63,14 @@ def pomConfig = {
 		}
 	}
 	scm {
-		connection "scm:git:git://github.com/davidB/${project.name}.git"
-		developerConnection "scm:git:git@github.com:davidB/${project.name}.git"
-		url "https://github.com/davidB/${project.name}/"
+		connection "scm:git:git://github.com/recursionpharma/metrics-influxdb.git"
+		developerConnection "scm:git:git@github.com:recursionpharma/metrics-influxdb.git"
+		url "https://github.com/recursionpharma/metrics-influxdb/"
 	}
 	developers {
 		developer {
-			id "davidB"
-			name "David Bernard"
-		}
-		developer {
-			id "McFoggy"
-			name "Matthieu Brouillard"
-			email "matthieu@brouillard.fr"
+			id "scizo"
+			name "Scott Nielsen"
 		}
 	}
 }
@@ -103,11 +98,11 @@ bintray {
 	publish = true //If version should be auto published after an upload
 	pkg {
 		repo = 'maven'
-		name = project.name
+		name = "metrics2-influxdb"
 		desc = description
-		websiteUrl = "https://github.com/davidB/${project.name}"
-		issueTrackerUrl = "https://github.com/davidB/${project.name}/issues"
-		vcsUrl = "https://github.com/davidB/${project.name}.git"
+		websiteUrl = "https://github.com/recursionpharma/metrics-influxdb"
+		issueTrackerUrl = "https://github.com/recursionpharma/metrics-influxdb/issues"
+		vcsUrl = "https://github.com/recursionpharma/metrics-influxdb.git"
 		licenses = ['CC0-1.0']
 		publicDownloadNumbers = true
 		version {

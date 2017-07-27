@@ -1,8 +1,8 @@
 package sandbox;
 
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.MetricName;
+import com.yammer.metrics.core.MetricsRegistry;
 import metrics_influxdb.InfluxdbReporter;
 import metrics_influxdb.UdpInfluxdbProtocol;
 import metrics_influxdb.v08.ReporterV08;
@@ -17,10 +17,10 @@ public class InfluxdbUdpSandbox {
 	public static void main(String[] args) {
 		ReporterV08 reporter = null;
 		try {
-			final MetricRegistry registry = new MetricRegistry();
+			final MetricsRegistry registry = new MetricsRegistry();
 			reporter = getInfluxdbReporter(registry);
 			reporter.start(3, TimeUnit.SECONDS);
-			final Counter counter = registry.counter(MetricRegistry.name("test", "counter"));
+			final Counter counter = registry.newCounter(new MetricName("group", "test", "name"));
 			for (int i = 0; i < 1; ++i) {
 				counter.inc();
 				Thread.sleep(Math.round(Math.random()) * 1000);
@@ -30,20 +30,17 @@ public class InfluxdbUdpSandbox {
 			System.exit(1);
 		} finally {
 			if (reporter != null) {
-				reporter.report();
-				reporter.stop();
+				reporter.run();
+				reporter.shutdown();
 			}
 		}
 	}
 
-	private static ReporterV08 getInfluxdbReporter(MetricRegistry registry) throws Exception {
+	private static ReporterV08 getInfluxdbReporter(MetricsRegistry registry) throws Exception {
 		return (ReporterV08) InfluxdbReporter
 				.forRegistry(registry)
 				.protocol(new UdpInfluxdbProtocol(getEnv(ENV_INFLUX_HOST), Integer.parseInt(getEnv(ENV_INFLUX_PORT))))
 				.prefixedWith(getEnv(ENV_REGISTRY_PREFIX, "test"))
-				.convertRatesTo(TimeUnit.SECONDS)
-				.convertDurationsTo(TimeUnit.MILLISECONDS)
-				.filter(MetricFilter.ALL)
 				.build();
 	}
 

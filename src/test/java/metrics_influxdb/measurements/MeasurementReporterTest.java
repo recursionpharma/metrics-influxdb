@@ -1,8 +1,7 @@
 package metrics_influxdb.measurements;
 
-import com.codahale.metrics.*;
-import com.codahale.metrics.Timer.Context;
-import metrics_influxdb.SortedMaps;
+import com.yammer.metrics.core.*;
+import com.yammer.metrics.core.TimerContext;
 import metrics_influxdb.api.measurements.MetricMeasurementTransformer;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -10,7 +9,6 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
-import static metrics_influxdb.SortedMaps.singleton;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -18,14 +16,14 @@ import static org.hamcrest.Matchers.startsWith;
 
 public class MeasurementReporterTest {
 	private ListInlinerSender sender;
-	private MetricRegistry registry;
+	private MetricsRegistry registry;
 	private MeasurementReporter reporter;
 
 	@BeforeMethod
 	public void init() {
 		sender = new ListInlinerSender(100);
-		registry = new MetricRegistry();
-		reporter = new MeasurementReporter(sender, registry, null, TimeUnit.SECONDS, TimeUnit.MILLISECONDS, Clock.defaultClock(), Collections.<String, String>emptyMap(), MetricMeasurementTransformer.NOOP);
+		registry = new MetricsRegistry();
+		reporter = new MeasurementReporter(sender, registry, Clock.defaultClock(), Collections.<String, String>emptyMap(), MetricMeasurementTransformer.NOOP);
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -34,12 +32,12 @@ public class MeasurementReporterTest {
 		assertThat(sender.getFrames().size(), is(0));
 
 		// Let's test with one counter
-		String counterName = "c";
-		Counter c = registry.counter(counterName);
+		Counter c = registry.newCounter(
+		    new MetricName(MeasurementReporterTest.class, "my-counter"));
 		c.inc();
-		reporter.report(SortedMaps.<String, Gauge>empty(), singleton(counterName, c), SortedMaps.<String, Histogram>empty(), SortedMaps.<String, Meter>empty(), SortedMaps.<String, Timer>empty());
+		reporter.run();
 		assertThat(sender.getFrames().size(), is(1));
-		assertThat(sender.getFrames().get(0), startsWith(counterName));
+		assertThat(sender.getFrames().get(0), startsWith("my-counter"));
 		assertThat(sender.getFrames().get(0), containsString("count=1i"));
 	}
 
@@ -48,18 +46,16 @@ public class MeasurementReporterTest {
 	public void reportingOneGaugeGeneratesOneLine() {
 		assertThat(sender.getFrames().size(), is(0));
 
-		// Let's test with one counter
-		String gaugeName = "g";
-		Gauge<Integer> g = new Gauge<Integer>() {
-			@Override
-			public Integer getValue() {
-				return 0;
-			}
-		};
-
-		reporter.report(SortedMaps.<String, Gauge>singleton(gaugeName, g), SortedMaps.<String, Counter>empty(), SortedMaps.<String, Histogram>empty(), SortedMaps.<String, Meter>empty(), SortedMaps.<String, Timer>empty());
+		// Let's test with one gauge
+    registry.newGauge(
+        new MetricName(MeasurementReporterTest.class, "my-gauge"),
+        new Gauge<Integer>() {
+          @Override
+          public Integer value() { return 0; }
+        });
+		reporter.run();
 		assertThat(sender.getFrames().size(), is(1));
-		assertThat(sender.getFrames().get(0), startsWith(gaugeName));
+		assertThat(sender.getFrames().get(0), startsWith("my-gauge"));
 		assertThat(sender.getFrames().get(0), containsString("value=0i"));
 	}
 
@@ -68,14 +64,16 @@ public class MeasurementReporterTest {
 	public void reportingOneMeterGeneratesOneLine() {
 		assertThat(sender.getFrames().size(), is(0));
 
-		// Let's test with one counter
-		String meterName = "m";
-		Meter meter = registry.meter(meterName);
+		// Let's test with one meter
+		Meter meter = registry.newMeter(
+		    new MetricName(MeasurementReporterTest.class, "my-meter"),
+        "event-type",
+        TimeUnit.MILLISECONDS);
 		meter.mark();
-		reporter.report(SortedMaps.<String, Gauge>empty(), SortedMaps.<String, Counter>empty(), SortedMaps.<String, Histogram>empty(), SortedMaps.singleton(meterName, meter), SortedMaps.<String, Timer>empty());
+		reporter.run();
 
 		assertThat(sender.getFrames().size(), is(1));
-		assertThat(sender.getFrames().get(0), startsWith(meterName));
+		assertThat(sender.getFrames().get(0), startsWith("my-meter"));
 
 		assertThat(sender.getFrames().get(0), containsString("count=1i"));
 		assertThat(sender.getFrames().get(0), containsString("one-minute="));
@@ -89,14 +87,15 @@ public class MeasurementReporterTest {
 	public void reportingOneHistogramGeneratesOneLine() {
 		assertThat(sender.getFrames().size(), is(0));
 
-		// Let's test with one counter
-		String histogramName = "h";
-		Histogram histogram = registry.histogram(histogramName);
+		// Let's test with one histogram
+		Histogram histogram = registry.newHistogram(
+		    new MetricName(MeasurementReporterTest.class, "my-histogram"),
+        true);
 		histogram.update(0);
-		reporter.report(SortedMaps.<String, Gauge>empty(), SortedMaps.<String, Counter>empty(), SortedMaps.singleton(histogramName, histogram), SortedMaps.<String, Meter>empty(), SortedMaps.<String, Timer>empty());
+		reporter.run();
 
 		assertThat(sender.getFrames().size(), is(1));
-		assertThat(sender.getFrames().get(0), startsWith(histogramName));
+		assertThat(sender.getFrames().get(0), startsWith("my-histogram"));
 
 		assertThat(sender.getFrames().get(0), containsString("count=1i"));
 		assertThat(sender.getFrames().get(0), containsString("min="));
@@ -116,10 +115,11 @@ public class MeasurementReporterTest {
 	public void reportingOneTimerGeneratesOneLine() {
 		assertThat(sender.getFrames().size(), is(0));
 
-		// Let's test with one counter
-		String timerName = "t";
-		Timer meter = registry.timer(timerName);
-		Context ctx = meter.time();
+		// Let's test with one timer
+		Timer meter = registry.newTimer(
+		    new MetricName(MeasurementReporterTest.class, "my-timer"),
+        TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+		TimerContext ctx = meter.time();
 
 		try {
 			Thread.sleep(20);
@@ -128,11 +128,11 @@ public class MeasurementReporterTest {
 
 		ctx.stop();
 
-		reporter.report(SortedMaps.<String, Gauge>empty(), SortedMaps.<String, Counter>empty(), SortedMaps.<String, Histogram>empty(), SortedMaps.<String, Meter>empty(), SortedMaps.singleton(timerName, meter));
+		reporter.run();
 
 
 		assertThat(sender.getFrames().size(), is(1));
-		assertThat(sender.getFrames().get(0), startsWith(timerName));
+		assertThat(sender.getFrames().get(0), startsWith("my-timer"));
 
 		assertThat(sender.getFrames().get(0), containsString("count=1i"));
 		assertThat(sender.getFrames().get(0), containsString("one-minute="));

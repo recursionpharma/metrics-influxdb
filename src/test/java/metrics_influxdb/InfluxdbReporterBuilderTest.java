@@ -11,18 +11,18 @@ import org.testng.annotations.Test;
 import static org.testng.AssertJUnit.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.ScheduledReporter;
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.AbstractPollingReporter;
 
 import metrics_influxdb.InfluxdbReporter.Builder;
 import metrics_influxdb.api.measurements.MetricMeasurementTransformer;
 
 public class InfluxdbReporterBuilderTest {
-	private MetricRegistry registry = new MetricRegistry();
+	private MetricsRegistry registry = new MetricsRegistry();
 
 	@Test
 	public void builder_api_with_default_values() {
-		ScheduledReporter reporter = InfluxdbReporter.forRegistry(registry).build();
+		AbstractPollingReporter reporter = InfluxdbReporter.forRegistry(registry).build();
 
 		assertThat(reporter, notNullValue());
 	}
@@ -49,7 +49,7 @@ public class InfluxdbReporterBuilderTest {
 
 	@Test
 	public void builder_api_with_compatibility_v08() {
-		ScheduledReporter reporter = 
+		AbstractPollingReporter reporter =
 				InfluxdbReporter
 				.forRegistry(registry)
 				.protocol(new HttpInfluxdbProtocol("127.0.0.1", 8086, "u0", "u0PWD", "test"))
@@ -61,7 +61,7 @@ public class InfluxdbReporterBuilderTest {
 
 	@Test
 	public void builder_api_with_protocol() {
-		ScheduledReporter reporter = 
+		AbstractPollingReporter reporter =
 				InfluxdbReporter
 				.forRegistry(registry)
 				.protocol(new HttpInfluxdbProtocol())
@@ -84,7 +84,7 @@ public class InfluxdbReporterBuilderTest {
 			}
 		};
 
-		Builder builder = 
+		Builder builder =
 				InfluxdbReporter
 				.forRegistry(registry)
 				.transformer(mmt);
@@ -106,7 +106,7 @@ public class InfluxdbReporterBuilderTest {
 		assertThat(builder.tags, notNullValue());
 		assertThat(builder.tags, hasEntry(tagKey, tagValue));
 
-		ScheduledReporter reporter = builder.build();
+		AbstractPollingReporter reporter = builder.build();
 		assertThat(reporter, notNullValue());
 	}
 
